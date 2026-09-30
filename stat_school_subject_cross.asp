@@ -104,7 +104,7 @@ strSQL = strSQL & "    SUM(ISNULL(p.pay_price, 0)) AS actual_amount "
 strSQL = strSQL & "FROM pay_info AS p WITH (READUNCOMMITTED) "
 strSQL = strSQL & "WHERE p.sell_info = 'o' "
 strSQL = strSQL & "  AND p.pay_date >= '" & startDate & "' "
-strSQL = strSQL & "  AND p.pay_date <= '" & endDate & "' "
+strSQL = strSQL & "  AND p.pay_date < DATEADD(DAY, 1, '" & endDate & "') "
 strSQL = strSQL & "GROUP BY p.userid "
 strSQL = strSQL & "ORDER BY p.userid "
 

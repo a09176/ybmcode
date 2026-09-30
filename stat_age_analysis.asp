@@ -150,7 +150,11 @@ strSQL = strSQL & "    END AS gender_name "
 
 strSQL = strSQL & "FROM pay_info AS p WITH (READUNCOMMITTED) "
 
-strSQL = strSQL & "LEFT JOIN vUser_info AS u WITH (READUNCOMMITTED) "
+strSQL = strSQL & "LEFT JOIN ( "
+strSQL = strSQL & "    SELECT userid, MIN(gender) AS gender "
+strSQL = strSQL & "    FROM vUser_info WITH (READUNCOMMITTED) "
+strSQL = strSQL & "    GROUP BY userid "
+strSQL = strSQL & ") AS u "
 strSQL = strSQL & "    ON p.userid = u.userid "
 
 strSQL = strSQL & "LEFT JOIN ( "
@@ -791,7 +795,7 @@ If dictTopProducts.Count > 0 Then
         Response.Write "<th width=""50"">순위</th>" & vbCrLf
         Response.Write "<th width=""280"">과정명</th>" & vbCrLf
         Response.Write "<th width=""100"">판매수</th>" & vbCrLf
-        Response.Write "<th width=""150"">결제액</th>" & vbCrLf
+        Response.Write "<th width=""150"">상품금액(product_price)</th>" & vbCrLf
         Response.Write "<th width=""150"">판매액/판매수</th>" & vbCrLf
         Response.Write "</tr>" & vbCrLf
 

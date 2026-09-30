@@ -97,19 +97,23 @@ downloadDate = Year(Now()) & _
 ' 한 건이라도 있으면 사용자로 본다.
 '==========================================================
 strSQL = ""
+strSQL = strSQL & ";WITH CouponOrder AS ( "
+strSQL = strSQL & "    SELECT DISTINCT pip.pay_num "
+strSQL = strSQL & "    FROM pay_info_product AS pip WITH (READUNCOMMITTED) "
+strSQL = strSQL & "    INNER JOIN pay_coupon_use AS cu WITH (READUNCOMMITTED) "
+strSQL = strSQL & "        ON pip.pay_product_num = cu.pay_product_num "
+strSQL = strSQL & ") "
 strSQL = strSQL & "SELECT "
 strSQL = strSQL & "    p.userid, "
 strSQL = strSQL & "    COUNT(DISTINCT p.pay_num) AS pay_count, "
 strSQL = strSQL & "    SUM(ISNULL(p.pay_price, 0)) AS actual_amount, "
-strSQL = strSQL & "    MAX(CASE WHEN cu.pay_product_num IS NOT NULL THEN 1 ELSE 0 END) AS coupon_used "
+strSQL = strSQL & "    MAX(CASE WHEN co.pay_num IS NOT NULL THEN 1 ELSE 0 END) AS coupon_used "
 strSQL = strSQL & "FROM pay_info AS p WITH (READUNCOMMITTED) "
-strSQL = strSQL & "LEFT JOIN pay_info_product AS pip WITH (READUNCOMMITTED) "
-strSQL = strSQL & "    ON p.pay_num = pip.pay_num "
-strSQL = strSQL & "LEFT JOIN pay_coupon_use AS cu WITH (READUNCOMMITTED) "
-strSQL = strSQL & "    ON pip.pay_product_num = cu.pay_product_num "
+strSQL = strSQL & "LEFT JOIN CouponOrder AS co "
+strSQL = strSQL & "    ON p.pay_num = co.pay_num "
 strSQL = strSQL & "WHERE p.sell_info = 'o' "
 strSQL = strSQL & "  AND p.pay_date >= '" & startDate & "' "
-strSQL = strSQL & "  AND p.pay_date <= '" & endDate & "' "
+strSQL = strSQL & "  AND p.pay_date < DATEADD(DAY, 1, '" & endDate & "') "
 strSQL = strSQL & "  AND p.userid IS NOT NULL "
 strSQL = strSQL & "  AND LTRIM(RTRIM(p.userid)) <> '' "
 strSQL = strSQL & "GROUP BY p.userid "
@@ -190,7 +194,7 @@ strSQL = strSQL & "    INNER JOIN pay_coupon_use AS cu WITH (READUNCOMMITTED) "
 strSQL = strSQL & "        ON pip.pay_product_num = cu.pay_product_num "
 strSQL = strSQL & "    WHERE p.sell_info = 'o' "
 strSQL = strSQL & "      AND p.pay_date >= '" & startDate & "' "
-strSQL = strSQL & "      AND p.pay_date <= '" & endDate & "' "
+strSQL = strSQL & "      AND p.pay_date < DATEADD(DAY, 1, '" & endDate & "') "
 strSQL = strSQL & ") "
 strSQL = strSQL & "SELECT TOP 20 "
 strSQL = strSQL & "    ISNULL(pi.product_name, '과정명 없음') AS product_name, "
@@ -207,7 +211,7 @@ strSQL = strSQL & "    ON pip.product_num = pi.product_num "
 strSQL = strSQL & "WHERE p.sell_info = 'o' "
 strSQL = strSQL & "  AND pi.product_type = 'S' "
 strSQL = strSQL & "  AND p.pay_date >= '" & startDate & "' "
-strSQL = strSQL & "  AND p.pay_date <= '" & endDate & "' "
+strSQL = strSQL & "  AND p.pay_date < DATEADD(DAY, 1, '" & endDate & "') "
 strSQL = strSQL & "GROUP BY pi.product_name "
 strSQL = strSQL & "ORDER BY "
 strSQL = strSQL & "    COUNT(DISTINCT pip.pay_product_num) DESC, "
@@ -222,17 +226,21 @@ arrTopProductWithCoupon = ExecSP(strSQL, strCyberTeacher)
 ' 교재는 제외
 '==========================================================
 strSQL = ""
-strSQL = strSQL & ";WITH NoCouponUser AS ( "
-strSQL = strSQL & "    SELECT DISTINCT p.userid "
-strSQL = strSQL & "    FROM pay_info AS p WITH (READUNCOMMITTED) "
-strSQL = strSQL & "    INNER JOIN pay_info_product AS pip WITH (READUNCOMMITTED) "
-strSQL = strSQL & "        ON p.pay_num = pip.pay_num "
-strSQL = strSQL & "    LEFT JOIN pay_coupon_use AS cu WITH (READUNCOMMITTED) "
+strSQL = strSQL & ";WITH CouponOrder AS ( "
+strSQL = strSQL & "    SELECT DISTINCT pip.pay_num "
+strSQL = strSQL & "    FROM pay_info_product AS pip WITH (READUNCOMMITTED) "
+strSQL = strSQL & "    INNER JOIN pay_coupon_use AS cu WITH (READUNCOMMITTED) "
 strSQL = strSQL & "        ON pip.pay_product_num = cu.pay_product_num "
+strSQL = strSQL & "), "
+strSQL = strSQL & "NoCouponUser AS ( "
+strSQL = strSQL & "    SELECT p.userid "
+strSQL = strSQL & "    FROM pay_info AS p WITH (READUNCOMMITTED) "
+strSQL = strSQL & "    LEFT JOIN CouponOrder AS co ON p.pay_num = co.pay_num "
 strSQL = strSQL & "    WHERE p.sell_info = 'o' "
 strSQL = strSQL & "      AND p.pay_date >= '" & startDate & "' "
-strSQL = strSQL & "      AND p.pay_date <= '" & endDate & "' "
-strSQL = strSQL & "      AND cu.pay_product_num IS NULL "
+strSQL = strSQL & "      AND p.pay_date < DATEADD(DAY, 1, '" & endDate & "') "
+strSQL = strSQL & "    GROUP BY p.userid "
+strSQL = strSQL & "    HAVING MAX(CASE WHEN co.pay_num IS NOT NULL THEN 1 ELSE 0 END) = 0 "
 strSQL = strSQL & ") "
 strSQL = strSQL & "SELECT TOP 20 "
 strSQL = strSQL & "    ISNULL(pi.product_name, '과정명 없음') AS product_name, "
@@ -249,7 +257,7 @@ strSQL = strSQL & "    ON pip.product_num = pi.product_num "
 strSQL = strSQL & "WHERE p.sell_info = 'o' "
 strSQL = strSQL & "  AND pi.product_type = 'S' "
 strSQL = strSQL & "  AND p.pay_date >= '" & startDate & "' "
-strSQL = strSQL & "  AND p.pay_date <= '" & endDate & "' "
+strSQL = strSQL & "  AND p.pay_date < DATEADD(DAY, 1, '" & endDate & "') "
 strSQL = strSQL & "GROUP BY pi.product_name "
 strSQL = strSQL & "ORDER BY "
 strSQL = strSQL & "    COUNT(DISTINCT pip.pay_product_num) DESC, "
@@ -483,7 +491,7 @@ Else
         <th width="300">과정명</th>
         <th width="120">구매자수</th>
         <th width="120">판매수</th>
-        <th width="150">실제결제액</th>
+        <th width="150">상품금액(product_price)</th>
     </tr>
 
     <%
@@ -538,7 +546,7 @@ Else
         <th width="300">과정명</th>
         <th width="120">구매자수</th>
         <th width="120">판매수</th>
-        <th width="150">실제결제액</th>
+        <th width="150">상품금액(product_price)</th>
     </tr>
 
     <%

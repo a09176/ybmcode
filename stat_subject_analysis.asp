@@ -128,7 +128,7 @@ strSQL = strSQL & "FROM pay_info AS p WITH (READUNCOMMITTED) "
 
 strSQL = strSQL & "WHERE p.sell_info = 'o' "
 strSQL = strSQL & "  AND p.pay_date >= '" & startDate & "' "
-strSQL = strSQL & "  AND p.pay_date <= '" & endDate & "' "
+strSQL = strSQL & "  AND p.pay_date < DATEADD(DAY, 1, '" & endDate & "') "
 
 strSQL = strSQL & "GROUP BY "
 strSQL = strSQL & "    LEFT(p.pay_date, 7), "
@@ -168,7 +168,7 @@ End If
 If teacherMap.Count > 0 Then
 
     strSQL = ""
-    strSQL = strSQL & "SELECT userid, subject "
+    strSQL = strSQL & "SELECT userid, MIN(NULLIF(LTRIM(RTRIM(subject)), '')) AS subject "
     strSQL = strSQL & "FROM vTeacher_info WITH (READUNCOMMITTED) "
     strSQL = strSQL & "WHERE userid IN ("
 
@@ -185,6 +185,7 @@ If teacherMap.Count > 0 Then
     Next
 
     strSQL = strSQL & ") "
+    strSQL = strSQL & "GROUP BY userid "
 
     arrTeacher = ExecSP(strSQL, strCyberTeacher)
 
@@ -247,7 +248,7 @@ If schoolMap.Count > 0 Then
     strSQL = ""
     strSQL = strSQL & "SELECT "
     strSQL = strSQL & "    u.userid, "
-    strSQL = strSQL & "    ISNULL(CONVERT(VARCHAR(20), si.school_division), '미분류') AS school_division "
+    strSQL = strSQL & "    ISNULL(CONVERT(VARCHAR(20), MIN(si.school_division)), '미분류') AS school_division "
     strSQL = strSQL & "FROM vUser_info AS u WITH (READUNCOMMITTED) "
     strSQL = strSQL & "LEFT JOIN school_info AS si WITH (READUNCOMMITTED) "
     strSQL = strSQL & "    ON u.school_num = si.school_num "
@@ -266,6 +267,7 @@ If schoolMap.Count > 0 Then
     Next
 
     strSQL = strSQL & ") "
+    strSQL = strSQL & "GROUP BY u.userid "
 
     arrSchool = ExecSP(strSQL, strCyberTeacher)
 

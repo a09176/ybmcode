@@ -104,9 +104,16 @@ downloadDate = Year(Now()) & _
 '==========================================================
 strSQL = ""
 
+strSQL = strSQL & ";WITH UserRegion AS ( "
+strSQL = strSQL & "    SELECT u.userid, MIN(sc.scate_name) AS region_name "
+strSQL = strSQL & "    FROM vUser_info AS u WITH (READUNCOMMITTED) "
+strSQL = strSQL & "    LEFT JOIN school_info AS si WITH (READUNCOMMITTED) ON u.school_num = si.school_num "
+strSQL = strSQL & "    LEFT JOIN school_category AS sc WITH (READUNCOMMITTED) ON si.sido_position = sc.scate_num "
+strSQL = strSQL & "    GROUP BY u.userid "
+strSQL = strSQL & ") "
 strSQL = strSQL & "SELECT "
 strSQL = strSQL & "    LEFT(p.pay_date, 4) AS pay_year, "
-strSQL = strSQL & "    ISNULL(sc.scate_name, '미분류') AS region_name, "
+strSQL = strSQL & "    ISNULL(ur.region_name, '미분류') AS region_name, "
 strSQL = strSQL & "    COUNT(DISTINCT p.userid) AS buyer_count, "
 strSQL = strSQL & "    SUM(ISNULL(p.pay_price, 0)) AS actual_amount, "
 strSQL = strSQL & "    COUNT(DISTINCT CASE "
@@ -115,14 +122,8 @@ strSQL = strSQL & "    END) AS sms_count "
 
 strSQL = strSQL & "FROM pay_info AS p WITH (READUNCOMMITTED) "
 
-strSQL = strSQL & "LEFT JOIN vUser_info AS u WITH (READUNCOMMITTED) "
-strSQL = strSQL & "    ON p.userid = u.userid "
-
-strSQL = strSQL & "LEFT JOIN school_info AS si WITH (READUNCOMMITTED) "
-strSQL = strSQL & "    ON u.school_num = si.school_num "
-
-strSQL = strSQL & "LEFT JOIN school_category AS sc WITH (READUNCOMMITTED) "
-strSQL = strSQL & "    ON si.sido_position = sc.scate_num "
+strSQL = strSQL & "LEFT JOIN UserRegion AS ur "
+strSQL = strSQL & "    ON p.userid = ur.userid "
 
 strSQL = strSQL & "LEFT JOIN ( "
 strSQL = strSQL & "    SELECT userid "
@@ -134,16 +135,16 @@ strSQL = strSQL & "    ON p.userid = sms.userid "
 
 strSQL = strSQL & "WHERE p.sell_info = 'o' "
 strSQL = strSQL & "  AND p.pay_date >= '" & startDate & "' "
-strSQL = strSQL & "  AND p.pay_date <= '" & endDate & "' "
+strSQL = strSQL & "  AND p.pay_date < DATEADD(DAY, 1, '" & endDate & "') "
 
 strSQL = strSQL & "GROUP BY "
 strSQL = strSQL & "    LEFT(p.pay_date, 4), "
-strSQL = strSQL & "    ISNULL(sc.scate_name, '미분류') "
+strSQL = strSQL & "    ISNULL(ur.region_name, '미분류') "
 
 strSQL = strSQL & "ORDER BY "
 strSQL = strSQL & "    LEFT(p.pay_date, 4) ASC, "
 strSQL = strSQL & "    COUNT(DISTINCT p.userid) DESC, "
-strSQL = strSQL & "    ISNULL(sc.scate_name, '미분류') ASC "
+strSQL = strSQL & "    ISNULL(ur.region_name, '미분류') ASC "
 
 arrResult = ExecSP(strSQL, strCyberTeacher)
 

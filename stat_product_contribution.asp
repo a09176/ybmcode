@@ -37,7 +37,7 @@ Dim tcourseNum
 Dim productName
 
 Dim saleCount
-Dim actualAmount
+Dim productAmount
 Dim yearTotalAmount
 
 Dim contributionRate
@@ -47,7 +47,7 @@ Dim currentYear
 Dim previousYear
 
 Dim totalSaleCount
-Dim totalActualAmount
+Dim totalProductAmount
 
 Dim hasResult
 Dim rowCount
@@ -70,13 +70,13 @@ downloadDate = Year(Now()) & _
                Right("0" & Day(Now()), 2)
 
 '==========================================================
-' 과정별 매출 기여도 조회
+' 과정별 상품금액 기여도 조회
 '
 ' 집계 기준
 ' - 과정 식별 기준: product_num
 ' - 과정 상품만 포함: product_type = 'S'
 ' - 판매수: pay_product_num 고유 개수
-' - 매출액: product_price 합계
+' - 상품금액: pay_info_product.product_price 합계 (주문 실결제액과 별도 지표)
 ' - 매출 비중: 해당 연도 전체 과정 매출 대비 비율
 '
 ' 주의
@@ -92,7 +92,7 @@ strSQL = strSQL & "        pi.product_num, "
 strSQL = strSQL & "        pi.Tcourse_num, "
 strSQL = strSQL & "        ISNULL(pi.product_name, '과정명 없음') AS product_name, "
 strSQL = strSQL & "        COUNT(DISTINCT pip.pay_product_num) AS sale_count, "
-strSQL = strSQL & "        SUM(ISNULL(pip.product_price, 0)) AS actual_amount "
+strSQL = strSQL & "        SUM(ISNULL(pip.product_price, 0)) AS product_amount "
 strSQL = strSQL & "    FROM pay_info AS p WITH (READUNCOMMITTED) "
 strSQL = strSQL & "    INNER JOIN pay_info_product AS pip WITH (READUNCOMMITTED) "
 strSQL = strSQL & "        ON p.pay_num = pip.pay_num "
@@ -114,12 +114,12 @@ strSQL = strSQL & "    product_num, "
 strSQL = strSQL & "    Tcourse_num, "
 strSQL = strSQL & "    product_name, "
 strSQL = strSQL & "    sale_count, "
-strSQL = strSQL & "    actual_amount, "
-strSQL = strSQL & "    SUM(actual_amount) OVER (PARTITION BY sale_year) AS year_total_amount "
+strSQL = strSQL & "    product_amount, "
+strSQL = strSQL & "    SUM(product_amount) OVER (PARTITION BY sale_year) AS year_total_amount "
 strSQL = strSQL & "FROM ProductSales "
 strSQL = strSQL & "ORDER BY "
 strSQL = strSQL & "    sale_year, "
-strSQL = strSQL & "    actual_amount DESC, "
+strSQL = strSQL & "    product_amount DESC, "
 strSQL = strSQL & "    sale_count DESC, "
 strSQL = strSQL & "    product_num "
 
@@ -171,8 +171,8 @@ Response.AddHeader _
 =======================================================-->
 <p style="color: #666; font-size: 12px;">
     2025년과 2026년의 과정별 판매 현황과 매출 기여도를 비교할 수 있는 자료입니다.<br>
-    과정별 판매수와 결제액을 기준으로 해당 연도 전체 과정 매출에서 차지하는 비중을 확인할 수 있습니다.<br>
-    매출액이 높은 과정부터 순서대로 표시하며, 누적 비중을 통해 주요 매출 과정이 전체 매출에 얼마나 기여하는지 파악할 수 있습니다.<br>
+    과정별 판매수와 상품금액(product_price)을 기준으로 해당 연도 전체 과정 상품금액에서 차지하는 비중을 확인할 수 있습니다.<br>
+    상품금액이 높은 과정부터 순서대로 표시하며, 주문 실결제액(pay_info.pay_price)과는 별도 지표입니다.<br>
     같은 과정명이더라도 상품번호가 다른 경우에는 별도의 상품으로 집계됩니다.<br>
     과정 상품만 분석 대상에 포함하며, 결제완료된 판매 데이터만 집계합니다.
 </p>
@@ -216,7 +216,7 @@ Else
     currentYear = ""
     cumulativeRate = 0
     totalSaleCount = 0
-    totalActualAmount = 0
+    totalProductAmount = 0
 
     For i = 0 To rowCount
 
@@ -225,7 +225,7 @@ Else
         tcourseNum = CLng(Nz(arrResult(2, i), 0))
         productName = Nz(arrResult(3, i), "과정명 없음")
         saleCount = CLng(Nz(arrResult(4, i), 0))
-        actualAmount = CDbl(Nz(arrResult(5, i), 0))
+        productAmount = CDbl(Nz(arrResult(5, i), 0))
         yearTotalAmount = CDbl(Nz(arrResult(6, i), 0))
 
         '--------------------------------------------------
@@ -247,7 +247,7 @@ Else
 
                     <td align="right"
                         style="mso-number-format:'\#\,\#\#0';">
-                        <%=FormatNumber(totalActualAmount, 0)%>
+                        <%=FormatNumber(totalProductAmount, 0)%>
                     </td>
 
                     <td align="right"
@@ -271,18 +271,18 @@ Else
             currentYear = saleYear
             cumulativeRate = 0
             totalSaleCount = 0
-            totalActualAmount = 0
+            totalProductAmount = 0
 %>
 
             <!--==================================================
-                <%=Server.HTMLEncode(saleYear & "년")%> 과정별 매출 기여도
+                <%=Server.HTMLEncode(saleYear & "년")%> 과정별 상품금액 기여도
             ===================================================-->
             <table border="1" style="margin-bottom: 20px;">
                 <thead>
                     <tr>
                         <td colspan="7"
                             style="font-weight: bold; font-size: 14px; background-color: #D3D3D3; padding: 8px;">
-                            <%=Server.HTMLEncode(saleYear & "년 과정별 매출 기여도")%>
+                            <%=Server.HTMLEncode(saleYear & "년 과정별 상품금액 기여도")%>
                         </td>
                     </tr>
 
@@ -292,8 +292,8 @@ Else
                         <th width="100">과정번호</th>
                         <th width="350">과정명</th>
                         <th width="100">판매수</th>
-                        <th width="150">매출액</th>
-                        <th width="120">매출 비중</th>
+                        <th width="150">상품금액(product_price)</th>
+                        <th width="120">상품금액 비중</th>
                         <th width="120">누적 비중</th>
                     </tr>
                 </thead>
@@ -303,7 +303,7 @@ Else
         End If
 
         If yearTotalAmount > 0 Then
-            contributionRate = (actualAmount / yearTotalAmount) * 100
+            contributionRate = (productAmount / yearTotalAmount) * 100
         Else
             contributionRate = 0
         End If
@@ -311,7 +311,7 @@ Else
         cumulativeRate = cumulativeRate + contributionRate
 
         totalSaleCount = totalSaleCount + saleCount
-        totalActualAmount = totalActualAmount + actualAmount
+        totalProductAmount = totalProductAmount + productAmount
 %>
 
                     <tr>
@@ -340,7 +340,7 @@ Else
 
                         <td align="right"
                             style="mso-number-format:'\#\,\#\#0';">
-                            <%=FormatNumber(actualAmount, 0)%>
+                            <%=FormatNumber(productAmount, 0)%>
                         </td>
 
                         <td align="right"
@@ -376,7 +376,7 @@ Else
 
                         <td align="right"
                             style="mso-number-format:'\#\,\#\#0';">
-                            <%=FormatNumber(totalActualAmount, 0)%>
+                            <%=FormatNumber(totalProductAmount, 0)%>
                         </td>
 
                         <td align="right"
@@ -415,7 +415,7 @@ Else
 
                         <td align="right"
                             style="mso-number-format:'\#\,\#\#0';">
-                            <%=FormatNumber(totalActualAmount, 0)%>
+                            <%=FormatNumber(totalProductAmount, 0)%>
                         </td>
 
                         <td align="right"

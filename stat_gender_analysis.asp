@@ -653,7 +653,7 @@ Else
         <th width="300">과정명</th>
         <th width="120">구매자수</th>
         <th width="120">판매수</th>
-        <th width="150">실제결제액</th>
+        <th width="150">상품금액(product_price)</th>
     </tr>
 
     <%
@@ -708,7 +708,7 @@ Else
         <th width="300">과정명</th>
         <th width="120">구매자수</th>
         <th width="120">판매수</th>
-        <th width="150">실제결제액</th>
+        <th width="150">상품금액(product_price)</th>
     </tr>
 
     <%
@@ -763,7 +763,7 @@ Else
         <th width="300">과정명</th>
         <th width="120">구매자수</th>
         <th width="120">판매수</th>
-        <th width="150">실제결제액</th>
+        <th width="150">상품금액(product_price)</th>
     </tr>
 
     <%

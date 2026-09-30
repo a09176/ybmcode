@@ -41,9 +41,9 @@ Dim productName
 Dim buyerCount
 Dim payCount
 Dim saleCount
-Dim actualAmount
+Dim productAmount
 Dim discountAmount
-Dim originalAmount
+Dim listAmount
 Dim averageAmount
 
 Dim rank
@@ -51,9 +51,9 @@ Dim rank
 Dim totalBuyerCount
 Dim totalPayCount
 Dim totalSaleCount
-Dim totalOriginal
+Dim totalListAmount
 Dim totalDiscount
-Dim totalActual
+Dim totalProductAmount
 
 '==========================================================
 ' 조회 기간
@@ -101,7 +101,7 @@ downloadDate = Year(Now()) & _
 '
 ' 과정 기준: product_info.product_type = 'S' (교재 제외)
 ' 과정 연결: pay_info_product.product_num = product_info.product_num
-' 실결제액: pay_info_product.product_price (상품 단위 금액, 중복 방지)
+' 상품금액: pay_info_product.product_price 합계 (주문 실결제액과 별도 지표)
 ' 할인액: 단체할인 + 쿠폰할인 + 포인트사용 (pay_product_num 기준)
 '==========================================================
 strSQL = ""
@@ -113,7 +113,7 @@ strSQL = strSQL & "        ISNULL(pi.product_name, '과정명 없음') AS product_nam
 strSQL = strSQL & "        COUNT(DISTINCT p.userid) AS buyer_count, "
 strSQL = strSQL & "        COUNT(DISTINCT p.pay_num) AS pay_count, "
 strSQL = strSQL & "        COUNT(DISTINCT pip.pay_product_num) AS sale_count, "
-strSQL = strSQL & "        SUM(ISNULL(pip.product_price, 0)) AS actual_amount "
+strSQL = strSQL & "        SUM(ISNULL(pip.product_price, 0)) AS product_amount "
 strSQL = strSQL & "    FROM pay_info AS p WITH (READUNCOMMITTED) "
 strSQL = strSQL & "    INNER JOIN pay_info_product AS pip WITH (READUNCOMMITTED) "
 strSQL = strSQL & "        ON p.pay_num = pip.pay_num "
@@ -122,7 +122,7 @@ strSQL = strSQL & "        ON pip.product_num = pi.product_num "
 strSQL = strSQL & "    WHERE p.sell_info = 'o' "
 strSQL = strSQL & "      AND pi.product_type = 'S' "
 strSQL = strSQL & "      AND p.pay_date >= '" & startDate & "' "
-strSQL = strSQL & "      AND p.pay_date <= '" & endDate & "' "
+strSQL = strSQL & "      AND p.pay_date < DATEADD(DAY, 1, '" & endDate & "') "
 strSQL = strSQL & "    GROUP BY "
 strSQL = strSQL & "        pip.product_num, "
 strSQL = strSQL & "        pi.product_name "
@@ -141,7 +141,7 @@ strSQL = strSQL & "        ON pip.pay_product_num = pd.pay_product_num "
 strSQL = strSQL & "    WHERE p.sell_info = 'o' "
 strSQL = strSQL & "      AND pi.product_type = 'S' "
 strSQL = strSQL & "      AND p.pay_date >= '" & startDate & "' "
-strSQL = strSQL & "      AND p.pay_date <= '" & endDate & "' "
+strSQL = strSQL & "      AND p.pay_date < DATEADD(DAY, 1, '" & endDate & "') "
 strSQL = strSQL & "    GROUP BY pip.product_num "
 strSQL = strSQL & "), "
 strSQL = strSQL & "CouponDiscount AS ( "
@@ -158,7 +158,7 @@ strSQL = strSQL & "        ON pip.pay_product_num = pcu.pay_product_num "
 strSQL = strSQL & "    WHERE p.sell_info = 'o' "
 strSQL = strSQL & "      AND pi.product_type = 'S' "
 strSQL = strSQL & "      AND p.pay_date >= '" & startDate & "' "
-strSQL = strSQL & "      AND p.pay_date <= '" & endDate & "' "
+strSQL = strSQL & "      AND p.pay_date < DATEADD(DAY, 1, '" & endDate & "') "
 strSQL = strSQL & "    GROUP BY pip.product_num "
 strSQL = strSQL & "), "
 strSQL = strSQL & "PointDiscount AS ( "
@@ -175,7 +175,7 @@ strSQL = strSQL & "        ON pip.pay_product_num = ppu.pay_product_num "
 strSQL = strSQL & "    WHERE p.sell_info = 'o' "
 strSQL = strSQL & "      AND pi.product_type = 'S' "
 strSQL = strSQL & "      AND p.pay_date >= '" & startDate & "' "
-strSQL = strSQL & "      AND p.pay_date <= '" & endDate & "' "
+strSQL = strSQL & "      AND p.pay_date < DATEADD(DAY, 1, '" & endDate & "') "
 strSQL = strSQL & "    GROUP BY pip.product_num "
 strSQL = strSQL & ") "
 strSQL = strSQL & "SELECT TOP 100 "
@@ -184,11 +184,11 @@ strSQL = strSQL & "    ps.product_name, "
 strSQL = strSQL & "    ps.buyer_count, "
 strSQL = strSQL & "    ps.pay_count, "
 strSQL = strSQL & "    ps.sale_count, "
-strSQL = strSQL & "    ps.actual_amount, "
+strSQL = strSQL & "    ps.product_amount, "
 strSQL = strSQL & "    ISNULL(pd.party_discount, 0) "
 strSQL = strSQL & "        + ISNULL(cd.coupon_discount, 0) "
 strSQL = strSQL & "        + ISNULL(pt.point_discount, 0) AS discount_amount, "
-strSQL = strSQL & "    ps.actual_amount "
+strSQL = strSQL & "    ps.product_amount "
 strSQL = strSQL & "        + ISNULL(pd.party_discount, 0) "
 strSQL = strSQL & "        + ISNULL(cd.coupon_discount, 0) "
 strSQL = strSQL & "        + ISNULL(pt.point_discount, 0) AS original_amount "
@@ -202,7 +202,7 @@ strSQL = strSQL & "    ON ps.product_num = pt.product_num "
 strSQL = strSQL & "ORDER BY "
 strSQL = strSQL & "    ps.sale_count DESC, "
 strSQL = strSQL & "    ps.buyer_count DESC, "
-strSQL = strSQL & "    ps.actual_amount DESC, "
+strSQL = strSQL & "    ps.product_amount DESC, "
 strSQL = strSQL & "    ps.product_num ASC "
 
 arrResult = ExecSP(strSQL, strCyberTeacher)
@@ -256,10 +256,10 @@ Response.AddHeader _
             <th width="100">구매자수</th>
             <th width="100">결제건수</th>
             <th width="100">판매수</th>
-            <th width="150">원금액</th>
+            <th width="150">할인 전 상품금액</th>
             <th width="150">할인액</th>
-            <th width="150">실결제액</th>
-            <th width="150">1인당 평균</th>
+            <th width="150">상품금액(product_price)</th>
+            <th width="150">1인당 상품금액</th>
         </tr>
     </thead>
 
@@ -268,9 +268,9 @@ Response.AddHeader _
 totalBuyerCount = 0
 totalPayCount = 0
 totalSaleCount = 0
-totalOriginal = 0
+totalListAmount = 0
 totalDiscount = 0
-totalActual = 0
+totalProductAmount = 0
 rank = 0
 
 If IsArray(arrResult) Then
@@ -285,12 +285,12 @@ If IsArray(arrResult) Then
         buyerCount = CLng(Nz(arrResult(2, i), 0))
         payCount = CLng(Nz(arrResult(3, i), 0))
         saleCount = CLng(Nz(arrResult(4, i), 0))
-        actualAmount = CDbl(Nz(arrResult(5, i), 0))
+        productAmount = CDbl(Nz(arrResult(5, i), 0))
         discountAmount = CDbl(Nz(arrResult(6, i), 0))
-        originalAmount = CDbl(Nz(arrResult(7, i), 0))
+        listAmount = CDbl(Nz(arrResult(7, i), 0))
 
         If buyerCount > 0 Then
-            averageAmount = actualAmount / buyerCount
+            averageAmount = productAmount / buyerCount
         Else
             averageAmount = 0
         End If
@@ -298,9 +298,9 @@ If IsArray(arrResult) Then
         totalBuyerCount = totalBuyerCount + buyerCount
         totalPayCount = totalPayCount + payCount
         totalSaleCount = totalSaleCount + saleCount
-        totalOriginal = totalOriginal + originalAmount
+        totalListAmount = totalListAmount + listAmount
         totalDiscount = totalDiscount + discountAmount
-        totalActual = totalActual + actualAmount
+        totalProductAmount = totalProductAmount + productAmount
 %>
         <tr>
             <td align="center"
@@ -329,7 +329,7 @@ If IsArray(arrResult) Then
 
             <td align="right"
                 style="mso-number-format:'\#\,\#\#0';">
-                <%=FormatNumber(originalAmount, 0)%>
+                <%=FormatNumber(listAmount, 0)%>
             </td>
 
             <td align="right"
@@ -339,7 +339,7 @@ If IsArray(arrResult) Then
 
             <td align="right"
                 style="mso-number-format:'\#\,\#\#0';">
-                <%=FormatNumber(actualAmount, 0)%>
+                <%=FormatNumber(productAmount, 0)%>
             </td>
 
             <td align="right"
@@ -385,7 +385,7 @@ End If
 
             <td align="right"
                 style="mso-number-format:'\#\,\#\#0';">
-                <%=FormatNumber(totalOriginal, 0)%>
+                <%=FormatNumber(totalListAmount, 0)%>
             </td>
 
             <td align="right"
@@ -395,14 +395,14 @@ End If
 
             <td align="right"
                 style="mso-number-format:'\#\,\#\#0';">
-                <%=FormatNumber(totalActual, 0)%>
+                <%=FormatNumber(totalProductAmount, 0)%>
             </td>
 
             <td align="right"
                 style="mso-number-format:'\#\,\#\#0';">
                 <%
                 If totalBuyerCount > 0 Then
-                    Response.Write FormatNumber(totalActual / totalBuyerCount, 0)
+                    Response.Write FormatNumber(totalProductAmount / totalBuyerCount, 0)
                 Else
                     Response.Write "0"
                 End If
