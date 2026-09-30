@@ -196,15 +196,15 @@ If IsArray(arrSms) Then
 End If
 
 '==========================================================
-' 4. 상위 판매 과정 TOP 5
+' 4. 상위 과정 상품금액 TOP 5
 '
-' 판매수 기준으로 정렬하고 판매수와 결제액을 모두 출력한다.
+' 판매수 기준으로 정렬하며 금액은 pay_info_product.product_price 합계이다.
 '==========================================================
 strSQL = ""
 strSQL = strSQL & "SELECT TOP 5 "
 strSQL = strSQL & "    ISNULL(pi.product_name, '과정명 없음') AS product_name, "
 strSQL = strSQL & "    COUNT(DISTINCT pip.pay_product_num) AS sale_count, "
-strSQL = strSQL & "    SUM(ISNULL(pip.product_price, 0)) AS actual_amount "
+strSQL = strSQL & "    SUM(ISNULL(pip.product_price, 0)) AS product_amount "
 strSQL = strSQL & "FROM pay_info AS p WITH (READUNCOMMITTED) "
 strSQL = strSQL & "INNER JOIN pay_info_product AS pip WITH (READUNCOMMITTED) "
 strSQL = strSQL & "    ON p.pay_num = pip.pay_num "
@@ -237,22 +237,23 @@ End If
 '==========================================================
 strSQL = ""
 strSQL = strSQL & "SELECT TOP 5 "
-strSQL = strSQL & "    ISNULL(sc.scate_name, '미분류') AS region_name, "
+strSQL = strSQL & "    ISNULL(ur.region_name, '미분류') AS region_name, "
 strSQL = strSQL & "    COUNT(DISTINCT p.userid) AS user_count, "
 strSQL = strSQL & "    SUM(ISNULL(p.pay_price, 0)) AS actual_amount "
 strSQL = strSQL & "FROM pay_info AS p WITH (READUNCOMMITTED) "
-strSQL = strSQL & "LEFT JOIN vUser_info AS u WITH (READUNCOMMITTED) "
-strSQL = strSQL & "    ON p.userid = u.userid "
-strSQL = strSQL & "LEFT JOIN school_info AS si WITH (READUNCOMMITTED) "
-strSQL = strSQL & "    ON u.school_num = si.school_num "
-strSQL = strSQL & "LEFT JOIN school_category AS sc WITH (READUNCOMMITTED) "
-strSQL = strSQL & "    ON si.sido_position = sc.scate_num "
+strSQL = strSQL & "LEFT JOIN ( "
+strSQL = strSQL & "    SELECT u.userid, MIN(sc.scate_name) AS region_name "
+strSQL = strSQL & "    FROM vUser_info AS u WITH (READUNCOMMITTED) "
+strSQL = strSQL & "    LEFT JOIN school_info AS si WITH (READUNCOMMITTED) ON u.school_num = si.school_num "
+strSQL = strSQL & "    LEFT JOIN school_category AS sc WITH (READUNCOMMITTED) ON si.sido_position = sc.scate_num "
+strSQL = strSQL & "    GROUP BY u.userid "
+strSQL = strSQL & ") AS ur ON p.userid = ur.userid "
 strSQL = strSQL & "WHERE p.sell_info = 'o' "
 strSQL = strSQL & "  AND p.pay_date >= '" & startDate & "' "
 strSQL = strSQL & "  AND p.pay_date < DATEADD(DAY, 1, '" & endDate & "') "
 strSQL = strSQL & "  AND p.userid IS NOT NULL "
 strSQL = strSQL & "  AND LTRIM(RTRIM(p.userid)) <> '' "
-strSQL = strSQL & "GROUP BY sc.scate_name "
+strSQL = strSQL & "GROUP BY ur.region_name "
 strSQL = strSQL & "ORDER BY "
 strSQL = strSQL & "    SUM(ISNULL(p.pay_price, 0)) DESC "
 
@@ -298,8 +299,11 @@ strSQL = strSQL & "                THEN '60대' "
 strSQL = strSQL & "            ELSE '70대이상' "
 strSQL = strSQL & "        END AS age_range "
 strSQL = strSQL & "    FROM pay_info AS p WITH (READUNCOMMITTED) "
-strSQL = strSQL & "    LEFT JOIN FamilyM.aes.f_user_add_site('www.ybmteachers.com') AS fm "
-strSQL = strSQL & "        ON p.userid = fm.userid "
+strSQL = strSQL & "    LEFT JOIN ( "
+strSQL = strSQL & "        SELECT userid, MIN(b_year) AS b_year "
+strSQL = strSQL & "        FROM FamilyM.aes.f_user_add_site('www.ybmteachers.com') "
+strSQL = strSQL & "        GROUP BY userid "
+strSQL = strSQL & "    ) AS fm ON p.userid = fm.userid "
 strSQL = strSQL & "    WHERE p.sell_info = 'o' "
 strSQL = strSQL & "      AND p.pay_date >= '" & startDate & "' "
 strSQL = strSQL & "      AND p.pay_date < DATEADD(DAY, 1, '" & endDate & "') "
@@ -332,7 +336,7 @@ strSQL = strSQL & "    ISNULL(t.subject, '미분류') AS subject_name, "
 strSQL = strSQL & "    COUNT(DISTINCT p.userid) AS user_count, "
 strSQL = strSQL & "    SUM(ISNULL(p.pay_price, 0)) AS actual_amount "
 strSQL = strSQL & "FROM pay_info AS p WITH (READUNCOMMITTED) "
-strSQL = strSQL & "INNER JOIN ( "
+strSQL = strSQL & "LEFT JOIN ( "
 strSQL = strSQL & "    SELECT "
 strSQL = strSQL & "        userid, "
 strSQL = strSQL & "        MIN(NULLIF(LTRIM(RTRIM(subject)), '')) AS subject "
@@ -573,12 +577,12 @@ th {
 </table>
 
 <!--======================================================
-    상위 판매 과정
+    상위 과정 상품금액
 =======================================================-->
 <table width="800" border="1">
     <tr>
         <td colspan="5" class="section-title">
-            상위 판매 과정 TOP 5
+            상위 과정 상품금액 TOP 5
         </td>
     </tr>
 
@@ -586,7 +590,7 @@ th {
         <th width="50">순위</th>
         <th width="350">과정명</th>
         <th width="120">판매수</th>
-        <th width="150">결제액</th>
+        <th width="150">상품금액(product_price)</th>
         <th width="120">비고</th>
     </tr>
 

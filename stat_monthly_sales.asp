@@ -111,7 +111,7 @@ strSQL = strSQL & "    LEFT JOIN PointDiscount AS pt "
 strSQL = strSQL & "        ON p.pay_num = pt.pay_num "
 strSQL = strSQL & "    WHERE p.sell_info = 'o' "
 strSQL = strSQL & "      AND p.pay_date >= '" & startDate & "' "
-strSQL = strSQL & "      AND p.pay_date <= '" & endDate & "' "
+strSQL = strSQL & "      AND p.pay_date < DATEADD(DAY, 1, '" & endDate & "') "
 strSQL = strSQL & ") "
 strSQL = strSQL & "SELECT "
 strSQL = strSQL & "    LEFT(pay_date, 7) AS ym, "
@@ -130,7 +130,7 @@ strSQL = strSQL & "    SUM(CASE WHEN biz_type = 'B2C' "
 strSQL = strSQL & "        THEN actual_amount ELSE 0 END) AS actual_b2c, "
 strSQL = strSQL & "    SUM(CASE WHEN biz_type = 'B2B' "
 strSQL = strSQL & "        THEN actual_amount ELSE 0 END) AS actual_b2b, "
-strSQL = strSQL & "    COUNT(*) AS pay_count, "
+strSQL = strSQL & "    COUNT(DISTINCT pay_num) AS pay_count, "
 strSQL = strSQL & "    COUNT(DISTINCT userid) AS buyer_count "
 strSQL = strSQL & "FROM OrderBase "
 strSQL = strSQL & "GROUP BY LEFT(pay_date, 7) "
@@ -170,7 +170,7 @@ Response.AddHeader "Content-Disposition", "attachment; filename=stat_monthly_sal
             <th colspan="3">할인액</th>
             <th colspan="2">실결제액</th>
             <th rowspan="2">결제건수</th>
-            <th rowspan="2">구매자수</th>
+            <th rowspan="2">월별 고유 구매자수<br>(합계는 월별 합산)</th>
             <th rowspan="2">평균구매액</th>
         </tr>
         <tr style="background-color: #4472C4; color: white; font-weight: bold;">
